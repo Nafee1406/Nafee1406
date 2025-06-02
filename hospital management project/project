@@ -1,0 +1,296 @@
+patients = {}
+appointments = {}
+billings = {}
+emergency_cases = []
+
+doctors = {
+    1: {"name": "Dr. Smith", "specialty": "Cardiology"},
+    2: {"name": "Dr. Adams", "specialty": "Neurology"},
+    3: {"name": "Dr. Lee", "specialty": "Orthopedics"},
+    4: {"name": "Dr. Patel", "specialty": "General Medicine"},
+}
+
+rooms = {
+    101: "General Ward",
+    102: "Private Room",
+    103: "ICU",
+    104: "AC Room"
+}
+
+room_charges = {
+    101: 500,
+    102: 1500,
+    103: 3000,
+    104: 2000
+}
+
+def register_patient():
+    print("\n--- Register New Patient ---")
+    patient_id = input("Enter Patient ID: ")
+    if patient_id in patients:
+        print("\nPatient already registered.")
+        existing = patients[patient_id]
+        print(f"Name       : {existing['name']}")
+        print(f"Age/Gender : {existing['age']} / {existing['gender']}")
+        print(f"Doctor     : {doctors.get(existing['doctor'], {}).get('name', 'Unknown')}")
+        print(f"Problem    : {appointments.get(patient_id, {}).get('disease', 'Not specified')}")
+        follow_up = input("Is the patient visiting for the same problem? (yes/no): ").lower()
+        if follow_up == "yes":
+            print("Noted as follow-up visit.")
+        else:
+            disease = input("Enter new Disease/Symptom: ")
+            schedule_appointment(patient_id, disease)
+        return
+
+    name = input("Name: ")
+    age = input("Age: ")
+    gender = input("Gender: ")
+    blood_group = input("Blood Group: ")
+    insurance = input("Insurance/Policy: ")
+
+    admit_choice = input("Is the patient being admitted? (yes/no): ").lower()
+    admitted = False
+    room_no = None
+    if admit_choice == "yes":
+        print("Available Rooms:")
+        for rno, rtype in rooms.items():
+            print(f"{rno}: {rtype}")
+        while True:
+            try:
+                room_no = int(input("Choose room number from above: "))
+                if room_no in rooms:
+                    break
+                else:
+                    print("Invalid room number. Please try again.")
+            except ValueError:
+                print("Please enter a valid number.")
+        admitted = True
+
+    vitals = {"BP": "120/80", "Pulse": "75", "Temp": "98.6F"}
+    medications = ["Paracetamol", "Vitamin D"]
+
+    assigned_doctor = None  # Assign doctor during appointment
+
+    patients[patient_id] = {
+        "name": name,
+        "age": age,
+        "gender": gender,
+        "blood_group": blood_group,
+        "insurance": insurance,
+        "vitals": vitals,
+        "medications": medications,
+        "room": room_no,
+        "doctor": assigned_doctor,
+        "admitted": admitted
+    }
+    print(f"Patient {name} registered successfully.")
+    schedule_now = input("Do you want to schedule an appointment now? (yes/no): ")
+    if schedule_now.lower() == "yes":
+        disease = input("Enter Disease/Symptom: ")
+        schedule_appointment(patient_id, disease)
+        show_appointment_schedule()
+
+def schedule_appointment(patient_id=None, disease=None):
+    print("\n--- Schedule Appointment ---")
+    if not patient_id:
+        patient_id = input("Enter Patient ID: ")
+    if patient_id not in patients:
+        print("Patient not found. Please register first.")
+        return
+    print("Available Doctors:")
+    for doc_id, doc_info in doctors.items():
+        print(f"{doc_id}. {doc_info['name']} ({doc_info['specialty']})")
+    doc_choice = int(input("Choose Doctor by ID: "))
+    if doc_choice not in doctors:
+        print("Invalid doctor selection. Try again.")
+        return
+    date = input("Enter Appointment Date (YYYY-MM-DD): ")
+    time = input("Enter Appointment Time (HH:MM): ")
+    if not disease:
+        disease = input("Enter Disease/Symptom: ")
+    appointments[patient_id] = {
+        "doctor": doc_choice,
+        "date": date,
+        "time": time,
+        "disease": disease
+    }
+    # Also update doctor in patient record
+    patients[patient_id]['doctor'] = doc_choice
+    print("Appointment scheduled successfully.")
+
+def show_appointment_schedule():
+    print("\n=== APPOINTMENT SCHEDULE ===")
+    if not appointments:
+        print("No appointments scheduled.")
+        return
+    for pid, app in appointments.items():
+        patient_name = patients[pid]['name'] if pid in patients else "Unknown"
+        doctor_name = doctors.get(app['doctor'], {}).get('name', 'Unknown')
+        print(f"\nPatient ID: {pid} ({patient_name})")
+        print(f"Doctor    : {doctor_name}")
+        print(f"Date/Time : {app['date']} {app['time']}")
+        print(f"Problem   : {app['disease']}")
+
+def process_billing():
+    print("\n--- Process Billing ---")
+    patient_id = input("Enter Patient ID: ")
+    if patient_id not in patients:
+        print("Patient not found.")
+        return
+    consultation_fee = 500
+    medication_fee = 300
+    patient_data = patients[patient_id]
+    room_charge = 0
+    if patient_data['admitted']:
+        room_no = patient_data['room']
+        room_charge = room_charges.get(room_no, 0)
+    else:
+        print("Patient not admitted. Skipping room charges.")
+
+    total = consultation_fee + medication_fee + room_charge
+    billings[patient_id] = {
+        "consultation_fee": consultation_fee,
+        "medication_fee": medication_fee,
+        "room_charge": room_charge,
+        "total": total
+    }
+    print("Billing processed successfully.")
+
+def handle_emergency():
+    print("\n--- Emergency Case ---")
+    patient_id = input("Enter Patient ID: ")
+    name = input("Enter Patient Name: ")
+    blood_group = input("Enter Blood Group: ")
+    cause = input("Cause of Emergency (e.g., Accident, Heart Attack): ")
+
+    print("Available Doctors:")
+    for doc_id, doc_info in doctors.items():
+        print(f"{doc_id}. {doc_info['name']} ({doc_info['specialty']})")
+    while True:
+        try:
+            assigned_doctor = int(input("Assign Doctor by ID: "))
+            if assigned_doctor in doctors:
+                break
+            else:
+                print("Invalid doctor selection. Try again.")
+        except ValueError:
+            print("Please enter a valid number.")
+
+    patients[patient_id] = {
+        "name": name,
+        "age": "N/A",
+        "gender": "N/A",
+        "blood_group": blood_group,
+        "insurance": "N/A",
+        "vitals": {},
+        "medications": [],
+        "room": 103,  # ICU room assigned
+        "doctor": assigned_doctor,
+        "admitted": True
+    }
+    emergency_cases.append({
+        "patient_id": patient_id,
+        "name": name,
+        "cause": cause,
+        "doctor": assigned_doctor,
+        "room": 103
+    })
+    print(f"Emergency case registered and patient assigned to ICU (Room 103) with Dr. {doctors[assigned_doctor]['name']}")
+
+def analyze_hospital_efficiency():
+    total_patients = len(patients)
+    admitted_patients = sum(1 for p in patients.values() if p['admitted'])
+    emergency_count = len(emergency_cases)
+    print("\n--- Hospital Efficiency ---")
+    print(f"Total Patients Registered  : {total_patients}")
+    print(f"Currently Admitted Patients: {admitted_patients}")
+    print(f"Emergency Cases            : {emergency_count}")
+
+def generate_patient_report(patient_id, report_type):
+    if patient_id not in patients:
+        print("Patient not found.")
+        return
+    patient = patients[patient_id]
+    print(f"\n--- {report_type.capitalize()} Report for Patient ID: {patient_id} ---")
+    
+    if report_type == "basic":
+        print(f"Name       : {patient['name']}")
+        print(f"Age/Gender : {patient['age']} / {patient['gender']}")
+        print(f"Blood Group: {patient['blood_group']}")
+        print(f"Insurance  : {patient['insurance']}")
+        
+    elif report_type == "medical":
+        print(f"Vitals       : {patient['vitals']}")
+        print(f"Medications  : {patient['medications']}")
+        print(f"Admitted     : {'Yes' if patient['admitted'] else 'No'}")
+        if patient['admitted']:
+            room_no = patient['room']
+            print(f"Room Number  : {room_no} ({rooms.get(room_no, 'Unknown')})")
+        else:
+            print("Room Number  : N/A")
+        doc_id = patient.get('doctor')
+        if doc_id:
+            print(f"Assigned Doctor: {doctors.get(doc_id, {}).get('name', 'Unknown')}")
+        else:
+            print("Assigned Doctor: None")
+    
+    elif report_type == "appointment":
+        app = appointments.get(patient_id)
+        if app:
+            doctor_name = doctors.get(app['doctor'], {}).get('name', 'Unknown')
+            print(f"Doctor       : {doctor_name}")
+            print(f"Date/Time    : {app['date']} {app['time']}")
+            print(f"Problem     : {app['disease']}")
+        else:
+            print("No appointment found.")
+    
+    elif report_type == "billing":
+        bill = billings.get(patient_id)
+        if bill:
+            print(f"Consultation Fee: {bill['consultation_fee']}")
+            print(f"Medication Fee  : {bill['medication_fee']}")
+            print(f"Room Charges    : {bill['room_charge']}")
+            print(f"Total Amount    : {bill['total']}")
+        else:
+            print("No billing record found.")
+    else:
+        print("Invalid report type. Supported types: basic, medical, appointment, billing.")
+
+def main_menu():
+    while True:
+        print("\n====== Hospital Management System ======")
+        print("1. Register Patient")
+        print("2. Schedule Appointment")
+        print("3. Show Appointment Schedule")
+        print("4. Process Billing")
+        print("5. Handle Emergency Case")
+        print("6. Analyze Hospital Efficiency")
+        print("7. Generate Patient Report")
+        print("8. Exit")
+        choice = input("Select an option (1-8): ")
+
+        if choice == '1':
+            register_patient()
+        elif choice == '2':
+            schedule_appointment()
+        elif choice == '3':
+            show_appointment_schedule()
+        elif choice == '4':
+            process_billing()
+        elif choice == '5':
+            handle_emergency()
+        elif choice == '6':
+            analyze_hospital_efficiency()
+        elif choice == '7':
+            pid = input("Enter Patient ID: ")
+            print("Report Types: basic, medical, appointment, billing")
+            rtype = input("Enter Report Type: ").lower()
+            generate_patient_report(pid, rtype)
+        elif choice == '8':
+            print("Exiting system. Goodbye!")
+            break
+        else:
+            print("Invalid choice. Please try again.")
+
+if __name__ == "__main__":
+    main_menu()
